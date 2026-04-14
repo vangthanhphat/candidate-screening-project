@@ -15,9 +15,22 @@ function App() {
 
   // Hàm 1: Thêm món hàng
   const handleAddItem = () => {
-    if (inputValue.trim() === '') return; // Chống việc bấm Add khi chưa nhập gì
+    const newName = inputValue.trim(); // Lấy giá trị và cắt dấu cách thừa
+    
+    if (newName === '') return; // Chống việc bấm Add khi chưa nhập gì
+
+    // --- TÍNH NĂNG MỚI: Chặn nhập trùng ---
+    // Dùng hàm .some() để kiểm tra xem có phần tử nào trùng tên không
+    const isDuplicate = items.some((item) => item.name.toLowerCase() === newName.toLowerCase());
+    
+    if (isDuplicate) {
+      alert(`Món "${newName}" đã có trong danh sách rồi nhé!`); // Hiện thông báo cảnh báo
+      return; // Dừng hàm lại ngay tại đây, không chạy xuống phần thêm món bên dưới nữa
+    }
+    // -------------------------------------
+
     // Đổ danh sách cũ ra (...items), sau đó nhét thêm món mới vào cuối danh sách
-    setItems([...items, { name: inputValue.trim(), completed: false }]);
+    setItems([...items, { name: newName, completed: false }]);
     setInputValue(''); // Reset ô nhập liệu về rỗng
   };
 
@@ -71,7 +84,7 @@ function App() {
           </Button>
         </div>
 
-        {/* --- KHU VỰC HIỂN THỊ DANH SÁCH --- */}
+        {/* KHU VỰC HIỂN THỊ DANH SÁCH */}
         <List>
           {items.map((item, index) => (
             <ListItem 

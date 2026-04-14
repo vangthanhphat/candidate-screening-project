@@ -1,35 +1,61 @@
 import React, { useState } from 'react';
-import { Container, Typography, Paper, TextField, Button, List, ListItem, ListItemText } from '@mui/material';
+// Import thêm ô tích, nút bấm vô hình bao quanh icon, icon thùng rác
+import { Container, Typography, Paper, TextField, Button, List, ListItem, ListItemText, Checkbox, IconButton } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 function App() {
-  // "intems là một mảng, setItems cho phép mở ra và thay đồ vật bên trong. mãng dc khởi tạo rỗng[])
-  const [items, setItems] = useState([]); 
+  // KHU VỰC LƯU TRỮ DỮ LIỆU
   
-  // "inputValue chô phép thêm vào, setInputValue cho phép nhập liệu'')
+  // items: Mảng chứa danh sách. every món đồ là một đối tượng chứa  tên và trạng thái mua hay chưa
+  const [items, setItems] = useState([]); 
+  // inputValue: Ghi nhớ những chữ đang gõ vào ô trống
   const [inputValue, setInputValue] = useState('');
 
-  // "Add"
-  // stim cắt bỏ dấu cách 
-  const handleAddItem = () => {
-    
-    if (inputValue.trim() === '') return;
+  // KHU VỰC XỬ LÝ LOGIC
 
-    // Thêm món mới vào danh sách hiện tại
-    // Nếu ô nhập liệu trống thì không làm gì cả
+  // Hàm 1: Thêm món hàng
+  const handleAddItem = () => {
+    if (inputValue.trim() === '') return; // Chống việc bấm Add khi chưa nhập gì
+    // Đổ danh sách cũ ra (...items), sau đó nhét thêm món mới vào cuối danh sách
     setItems([...items, { name: inputValue.trim(), completed: false }]);
-    
-    // Xóa chữ trong ô nhập liệu đi để nhập món khác
-    setInputValue('');
+    setInputValue(''); // Reset ô nhập liệu về rỗng
   };
 
+  // Hàm 2: Đánh dấu đã mua / chưa mua 
+  const handleToggleComplete = (index) => {
+    // Nguyên tắc của React: Không sửa trực tiếp biến gốc. Ta copy ra một danh sách mới.
+    const newItems = [...items];
+    // Lật ngược trạng thái 
+    newItems[index].completed = !newItems[index].completed;
+    // Cập nhật lại danh sách mới vào bộ nhớ
+    setItems(newItems);
+  };
+
+  // Hàm 3: Xóa món hàng khỏi danh sách
+  const handleDeleteItem = (index) => {
+    // Dùng hàm .filter() để quét qua mảng. Nó sẽ giữ lại tất cả các món đồ KHÔNG trùng với vị trí 'index' vừa bấm xóa.
+    const newItems = items.filter((_, i) => i !== index);
+    setItems(newItems);
+  };
+
+  // Tính toán số lượng cho tính năng đếm
+  const totalItems = items.length;
+  const completedItems = items.filter((item) => item.completed).length;
+
+  //  KHU VỰC GIAO DIỆN UI
   return (
     <Container maxWidth="sm" style={{ marginTop: '50px' }}>
       <Paper elevation={3} style={{ padding: '30px', borderRadius: '10px' }}>
         <Typography variant="h4" align="center" color="primary" fontWeight="bold" gutterBottom>
           My Shopping List
         </Typography>
+
+        {/* Hiển thị số lượng đếm */}
+        <Typography variant="subtitle1" color="textSecondary" align="center" gutterBottom>
+          Tổng số món hàng: {totalItems} | Đã mua: {completedItems}
+        </Typography>
         
-        {/* Khu vực nhập liệu */}
+        {/* KHU VỰC NHẬP LIỆU */}
         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', marginTop: '20px' }}>
           <TextField 
             fullWidth 
@@ -37,17 +63,43 @@ function App() {
             variant="outlined" 
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
+            /* Enter thì gọi luôn hàm thêm hàng */
+            onKeyPress={(e) => e.key === 'Enter' ? handleAddItem() : null} 
           />
           <Button variant="contained" color="primary" onClick={handleAddItem}>
             Add
           </Button>
         </div>
 
-        {/* Khu vực hiển thị danh sách */}
+        {/* --- KHU VỰC HIỂN THỊ DANH SÁCH --- */}
         <List>
           {items.map((item, index) => (
-            <ListItem key={index} divider>
-              <ListItemText primary={item.name} />
+            <ListItem 
+              key={index} 
+              divider
+              /* nút xóa nằm bên phải */
+              secondaryAction={
+                <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteItem(index)} color="error">
+                  <DeleteIcon />
+                </IconButton>
+              }
+            >
+              {/* Ô vuông check đã mua  bên trái */}
+              <Checkbox
+                edge="start"
+                checked={item.completed} // Hiển thị dấu tích dựa vào dữ liệu có true hay không
+                onChange={() => handleToggleComplete(index)} // Khi click vào thì gọi hàm lật trạng thái
+              />
+              
+              {/* Nội dung chữ của món hàng */}
+              <ListItemText 
+                primary={item.name} 
+                /* nếu completed là true thì gạch tên gạch ngang chữ vs làm mờ màu đi */
+                style={{ 
+                  textDecoration: item.completed ? 'line-through' : 'none',
+                  color: item.completed ? 'gray' : 'black'
+                }} 
+              />
             </ListItem>
           ))}
         </List>

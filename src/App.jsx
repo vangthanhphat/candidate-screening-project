@@ -1,32 +1,57 @@
-import { Container, Typography, Paper } from '@mui/material';
+import React, { useState } from 'react';
+import { Container, Typography, Paper, TextField, Button, List, ListItem, ListItemText } from '@mui/material';
 
-// nội dung trang web
 function App() {
+  // "intems là một mảng, setItems cho phép mở ra và thay đồ vật bên trong. mãng dc khởi tạo rỗng[])
+  const [items, setItems] = useState([]); 
+  
+  // "inputValue chô phép thêm vào, setInputValue cho phép nhập liệu'')
+  const [inputValue, setInputValue] = useState('');
+
+  // "Add"
+  // stim cắt bỏ dấu cách 
+  const handleAddItem = () => {
+    
+    if (inputValue.trim() === '') return;
+
+    // Thêm món mới vào danh sách hiện tại
+    // Nếu ô nhập liệu trống thì không làm gì cả
+    setItems([...items, { name: inputValue.trim(), completed: false }]);
+    
+    // Xóa chữ trong ô nhập liệu đi để nhập món khác
+    setInputValue('');
+  };
+
   return (
     <Container maxWidth="sm" style={{ marginTop: '50px' }}>
-      {/* maxWidth="sm" giới hạn chiều rộng ở mức nhỏ */}
-      {/* style={{ marginTop: '50px' }} đẩy khối cách mép trình duyệt 50px */}
-      
       <Paper elevation={3} style={{ padding: '30px', borderRadius: '10px' }}>
-        {/* elevation={3} độ bóng mức 3 */}
-        {/* style={{ padding: '30px' }} tạo khoảng trống cách lề 30 px */}
-        {/* borderRadius: '10px' bo bốn góc */}
-        
         <Typography variant="h4" align="center" color="primary" fontWeight="bold" gutterBottom>
           My Shopping List
         </Typography>
-        {/*variant="h4": cỡ chữ tương đương thẻ 4
-        align="center" thằng này căn giữ 
-        color="primary" màu xanh
-        fontWeight="bold" : in đập chữ 
-        gutterbottom thêm khoảng cách với dòng tiếp theo
-        */}
-        <Typography variant="body1" align="center" color="textSecondary">
-          {/*variant="body 1" cỡ chứ mặc đinh
-          align="center"
-          code */}
-          xin chào đây là demoo 
-        </Typography>
+        
+        {/* Khu vực nhập liệu */}
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', marginTop: '20px' }}>
+          <TextField 
+            fullWidth 
+            label="Nhập tên món hàng..." 
+            variant="outlined" 
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+          />
+          <Button variant="contained" color="primary" onClick={handleAddItem}>
+            Add
+          </Button>
+        </div>
+
+        {/* Khu vực hiển thị danh sách */}
+        <List>
+          {items.map((item, index) => (
+            <ListItem key={index} divider>
+              <ListItemText primary={item.name} />
+            </ListItem>
+          ))}
+        </List>
+
       </Paper>
     </Container>
   );

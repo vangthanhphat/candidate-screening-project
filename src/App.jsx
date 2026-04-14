@@ -1,4 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+// Import db từ file firebase.js 
+import { db } from './firebase'; 
+// Import các hàm cần thiết từ thư viện Firebase
+import { collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query } from 'firebase/firestore';
+
 // Import thêm ô tích, nút bấm vô hình bao quanh icon, icon thùng rác
 import { Container, Typography, Paper, TextField, Button, List, ListItem, ListItemText, Checkbox, IconButton } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -14,10 +19,24 @@ function App() {
   // inputValue: Ghi nhớ những chữ đang gõ vào ô trống
   const [inputValue, setInputValue] = useState('');
 
+  // TÍNH NĂNG MỚI: Đọc dữ liệu từ Firebase khi App khởi chạy
+  useEffect(() => {
+    const q = query(collection(db, 'shopping_list'));
+    // onSnapshot giúp cập nhật danh sách ngay lập tức khi database có thay đổi
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const itemsArray = [];
+      querySnapshot.forEach((doc) => {
+        itemsArray.push({ ...doc.data(), id: doc.id });
+      });
+      setItems(itemsArray);
+    });
+    return () => unsubscribe();
+  }, []);
+
   // KHU VỰC XỬ LÝ LOGIC
 
   // Hàm 1: Thêm món hàng
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
     const newName = inputValue.trim(); // Lấy giá trị và cắt dấu cách thừa
     
     if (newName === '') return; // Chống việc bấm Add khi chưa nhập gì
@@ -31,43 +50,52 @@ function App() {
       return; // Dừng hàm lại ngay tại đây, không chạy xuống phần thêm món bên dưới nữa
     }
     
-
     // Đổ danh sách cũ ra (...items), sau đó nhét thêm món mới vào cuối danh sách
     // Thêm thuộc tính quantity: 1 (số lượng mặc định khi mới thêm là 1)
-    setItems([...items, { name: newName, completed: false, quantity: 1 }]);
+    // ghi trực tiếp lên Firebase
+    await addDoc(collection(db, 'shopping_list'), {
+      name: newName,
+      completed: false,
+      quantity: 1
+    });
+
     setInputValue(''); // Reset ô nhập liệu về rỗng
   };
 
   // Hàm 2: Đánh dấu đã mua / chưa mua 
-  const handleToggleComplete = (index) => {
+  const handleToggleComplete = async (item) => {
     // Nguyên tắc của React: Không sửa trực tiếp biến gốc. Ta copy ra một danh sách mới.
-    const newItems = [...items];
+    // LƯU Ý: Cập nhật trực tiếp trên Firebase thông qua ID
+    const itemDoc = doc(db, 'shopping_list', item.id);
+    await updateDoc(itemDoc, {
+      completed: !item.completed
+    });
     // Lật ngược trạng thái 
-    newItems[index].completed = !newItems[index].completed;
     // Cập nhật lại danh sách mới vào bộ nhớ
-    setItems(newItems);
   };
 
   // Hàm 3: Xóa món hàng khỏi danh sách
-  const handleDeleteItem = (index) => {
+  const handleDeleteItem = async (id) => {
     // Dùng hàm .filter() để quét qua mảng. Nó sẽ giữ lại tất cả các món đồ KHÔNG trùng với vị trí 'index' vừa bấm xóa.
-    const newItems = items.filter((_, i) => i !== index);
-    setItems(newItems);
+    // LƯU Ý: Xóa tài liệu trên Firebase bằng ID
+    await deleteDoc(doc(db, 'shopping_list', id));
   };
 
   // Hàm 4: Tăng số lượng món hàng
-  const handleIncreaseQuantity = (index) => {
-    const newItems = [...items];
-    newItems[index].quantity += 1;
-    setItems(newItems);
+  const handleIncreaseQuantity = async (item) => {
+    const itemDoc = doc(db, 'shopping_list', item.id);
+    await updateDoc(itemDoc, {
+      quantity: item.quantity + 1
+    });
   };
 
   // Hàm 5: Giảm số lượng món hàng (chặn không cho giảm dưới 1)
-  const handleDecreaseQuantity = (index) => {
-    const newItems = [...items];
-    if (newItems[index].quantity > 1) {
-      newItems[index].quantity -= 1;
-      setItems(newItems);
+  const handleDecreaseQuantity = async (item) => {
+    if (item.quantity > 1) {
+      const itemDoc = doc(db, 'shopping_list', item.id);
+      await updateDoc(itemDoc, {
+        quantity: item.quantity - 1
+      });
     }
   };
 
@@ -105,17 +133,17 @@ function App() {
           </Button>
         </div>
 
-        {/*  KHU VỰC HIỂN THỊ DANH SÁCH */}
+        {/* KHU VỰC HIỂN THỊ DANH SÁCH */}
         <List>
-          {items.map((item, index) => (
+          {items.map((item) => (
             <ListItem 
-              key={index} 
+              key={item.id} 
               divider
               /* nút xóa nằm bên phải, giờ được nhóm cùng nút tăng giảm số lượng */
               secondaryAction={
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   {/* Nút Trừ */}
-                  <IconButton onClick={() => handleDecreaseQuantity(index)} size="small" color="primary">
+                  <IconButton onClick={() => handleDecreaseQuantity(item)} size="small" color="primary">
                     <RemoveIcon />
                   </IconButton>
                   
@@ -125,12 +153,12 @@ function App() {
                   </Typography>
                   
                   {/* Nút Cộng */}
-                  <IconButton onClick={() => handleIncreaseQuantity(index)} size="small" color="primary">
+                  <IconButton onClick={() => handleIncreaseQuantity(item)} size="small" color="primary">
                     <AddIcon />
                   </IconButton>
 
                   {/* Nút Xóa (thùng rác) */}
-                  <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteItem(index)} color="error" style={{ marginLeft: '15px' }}>
+                  <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteItem(item.id)} color="error" style={{ marginLeft: '15px' }}>
                     <DeleteIcon />
                   </IconButton>
                 </div>
@@ -140,7 +168,7 @@ function App() {
               <Checkbox
                 edge="start"
                 checked={item.completed} // Hiển thị dấu tích dựa vào dữ liệu có true hay không
-                onChange={() => handleToggleComplete(index)} // Khi click vào thì gọi hàm lật trạng thái
+                onChange={() => handleToggleComplete(item)} // Khi click vào thì gọi hàm lật trạng thái
               />
               
               {/* Nội dung chữ của món hàng */}
